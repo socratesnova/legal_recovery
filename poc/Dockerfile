@@ -1,19 +1,18 @@
 # Multi-stage build for Legal Recovery OS POC
 FROM node:20-alpine AS base
 
-# Install dependencies only when needed
+# Dependencies for production only (copied to runner)
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-
-# Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
-# Rebuild the source code only when needed
+# Builder stage: install ALL dependencies including dev (needed for build)
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json* ./
+RUN npm ci
 COPY . .
 
 # Next.js collects completely anonymous telemetry data about general usage.
@@ -31,7 +30,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Create non-root user (but don't use runAsNonRoot in K8s - images need explicit USER)
+# Create non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
