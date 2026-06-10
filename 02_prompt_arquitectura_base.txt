@@ -1,0 +1,36 @@
+CONTEXTO GENERAL:
+Construir Legal Recovery OS, una plataforma para oficinas legales que gestionan cartera castigada bancaria de bancos, fondos, financieras, cooperativas y entidades cedentes. El sistema debe priorizar recuperacion neta, trazabilidad, gobierno legal de datos, auditoria y cumplimiento. No construir funcionalidades para scraping, acceso no autorizado, contacto a terceros, uso indebido de JCE/TSS/buros ni WhatsApp para cobro directo masivo.
+
+REGLAS CRITICAS:
+1. Todo dato debe tener fuente, fecha, permiso de uso, restriccion, confiabilidad y auditoria.
+2. Bloquear datos sin fuente legal o contractual.
+3. Bloquear contacto a terceros no autorizados.
+4. WhatsApp solo debe ser canal neutral/restringido con opt-in y reglas de politica.
+5. TSS/JCE/buros solo mediante integraciones autorizadas, convenio, consentimiento, orden o base legal valida.
+6. Las decisiones legales sensibles requieren revision humana.
+7. Mantener logs inmutables de acciones criticas.
+8. Implementar RBAC/ABAC por rol, institucion, cartera y sensibilidad del dato.
+
+OBJETIVO:
+Diseña la arquitectura tecnica base para Legal Recovery OS.
+
+STACK SUGERIDO:
+Frontend: Next.js + React + Tailwind.
+Backend: FastAPI o NestJS.
+Base de datos: PostgreSQL.
+Archivos: S3 compatible/MinIO.
+Colas: Redis + Celery/BullMQ.
+IA: RAG privado, modelos controlados y anonimización.
+Auth: JWT + MFA + RBAC/ABAC.
+PDF: plantillas HTML/PDF.
+
+REQUERIMIENTOS:
+- Multi-institucion y multi-cartera.
+- Logs de auditoria inmutables.
+- API versionada.
+- Separacion portal interno, portal banco y portal deudor.
+- Seguridad por rol, institucion, cartera y sensibilidad.
+- Preparar integraciones externas autorizadas sin implementarlas como scraping.
+
+ENTREGABLE:
+Genera diagrama textual, estructura de carpetas y decisiones de arquitectura.

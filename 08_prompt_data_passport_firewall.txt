@@ -1,0 +1,29 @@
+CONTEXTO GENERAL:
+Construir Legal Recovery OS, una plataforma para oficinas legales que gestionan cartera castigada bancaria de bancos, fondos, financieras, cooperativas y entidades cedentes. El sistema debe priorizar recuperacion neta, trazabilidad, gobierno legal de datos, auditoria y cumplimiento. No construir funcionalidades para scraping, acceso no autorizado, contacto a terceros, uso indebido de JCE/TSS/buros ni WhatsApp para cobro directo masivo.
+
+REGLAS CRITICAS:
+1. Todo dato debe tener fuente, fecha, permiso de uso, restriccion, confiabilidad y auditoria.
+2. Bloquear datos sin fuente legal o contractual.
+3. Bloquear contacto a terceros no autorizados.
+4. WhatsApp solo debe ser canal neutral/restringido con opt-in y reglas de politica.
+5. TSS/JCE/buros solo mediante integraciones autorizadas, convenio, consentimiento, orden o base legal valida.
+6. Las decisiones legales sensibles requieren revision humana.
+7. Mantener logs inmutables de acciones criticas.
+8. Implementar RBAC/ABAC por rol, institucion, cartera y sensibilidad del dato.
+
+OBJETIVO:
+Crear Data Passport y Legal Data Firewall.
+
+DATA PASSPORT DEBE TENER:
+field_name, field_value_hash, source_type, source_reference, captured_at, legal_basis, allowed_uses, prohibited_uses, confidence_score, last_validated_at, visibility_roles, status, expiration_date.
+
+LEGAL FIREWALL:
+Funcion canUseData(user, data, purpose, channel) que devuelva allow/deny/restrict y motivo.
+
+BLOQUEOS:
+- Dato sin fuente.
+- Tercero no autorizado.
+- WhatsApp sin opt-in.
+- Caso en disputa.
+- Fuente JCE/TSS sin autorizacion.
+- Dato vencido o restringido.

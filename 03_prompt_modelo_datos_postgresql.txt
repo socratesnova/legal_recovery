@@ -1,0 +1,30 @@
+CONTEXTO GENERAL:
+Construir Legal Recovery OS, una plataforma para oficinas legales que gestionan cartera castigada bancaria de bancos, fondos, financieras, cooperativas y entidades cedentes. El sistema debe priorizar recuperacion neta, trazabilidad, gobierno legal de datos, auditoria y cumplimiento. No construir funcionalidades para scraping, acceso no autorizado, contacto a terceros, uso indebido de JCE/TSS/buros ni WhatsApp para cobro directo masivo.
+
+REGLAS CRITICAS:
+1. Todo dato debe tener fuente, fecha, permiso de uso, restriccion, confiabilidad y auditoria.
+2. Bloquear datos sin fuente legal o contractual.
+3. Bloquear contacto a terceros no autorizados.
+4. WhatsApp solo debe ser canal neutral/restringido con opt-in y reglas de politica.
+5. TSS/JCE/buros solo mediante integraciones autorizadas, convenio, consentimiento, orden o base legal valida.
+6. Las decisiones legales sensibles requieren revision humana.
+7. Mantener logs inmutables de acciones criticas.
+8. Implementar RBAC/ABAC por rol, institucion, cartera y sensibilidad del dato.
+
+OBJETIVO:
+Crear el modelo de datos PostgreSQL para Legal Recovery OS.
+
+TABLAS MINIMAS:
+institutions, institution_contracts, portfolios, portfolio_rules, debtors, cases, case_products, documents, document_hashes, contacts, consents, related_parties, communications, campaigns, ai_scores, legal_reviews, agreements, promises, payments, reconciliations, disputes, court_actions, users, roles, permissions, audit_logs, data_passports, data_restrictions, bank_reports.
+
+REQUERIMIENTOS:
+- UUID primary keys.
+- created_at, updated_at, deleted_at.
+- institution_id en entidades multi-tenant.
+- audit_logs para toda accion critica.
+- data_passports conectado a contactos, documentos, campos sensibles y fuentes.
+- indices para institution_id, portfolio_id, case_id, debtor_id.
+- estados: active, restricted, blocked, disputed, closed.
+
+ENTREGABLE:
+Genera SQL inicial, migraciones y explicacion de relaciones.

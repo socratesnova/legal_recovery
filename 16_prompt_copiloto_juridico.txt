@@ -1,0 +1,26 @@
+CONTEXTO GENERAL:
+Construir Legal Recovery OS, una plataforma para oficinas legales que gestionan cartera castigada bancaria de bancos, fondos, financieras, cooperativas y entidades cedentes. El sistema debe priorizar recuperacion neta, trazabilidad, gobierno legal de datos, auditoria y cumplimiento. No construir funcionalidades para scraping, acceso no autorizado, contacto a terceros, uso indebido de JCE/TSS/buros ni WhatsApp para cobro directo masivo.
+
+REGLAS CRITICAS:
+1. Todo dato debe tener fuente, fecha, permiso de uso, restriccion, confiabilidad y auditoria.
+2. Bloquear datos sin fuente legal o contractual.
+3. Bloquear contacto a terceros no autorizados.
+4. WhatsApp solo debe ser canal neutral/restringido con opt-in y reglas de politica.
+5. TSS/JCE/buros solo mediante integraciones autorizadas, convenio, consentimiento, orden o base legal valida.
+6. Las decisiones legales sensibles requieren revision humana.
+7. Mantener logs inmutables de acciones criticas.
+8. Implementar RBAC/ABAC por rol, institucion, cartera y sensibilidad del dato.
+
+OBJETIVO:
+Crear copiloto juridico.
+
+FUNCIONES:
+- Matriz documental.
+- Cronologia de eventos.
+- Riesgo de prescripcion para revision humana.
+- Resumen de pagos, promesas y acuerdos.
+- Checklist de accion legal.
+- Borradores controlados: intimacion, carta de acuerdo, solicitud de documentos al banco, informe ejecutivo.
+
+LIMITES:
+No emitir decision legal final sin abogado. No generar amenazas falsas ni documentos sin revision.
