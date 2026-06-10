@@ -1,0 +1,102 @@
+name: Build and Deploy to K3s
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: socratesnova/legal_recovery
+
+jobs:
+  build:
+    runs-on: [self-hosted, k3s, linux]
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./poc
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted, k3s, linux]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        run: |
+          kubectl version --client
+
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace legal-recovery --dry-run=client -o yaml | kubectl apply -f -
+          kubectl label namespace legal-recovery \
+            pod-security.kubernetes.io/enforce=baseline \
+            pod-security.kubernetes.io/enforce-version=latest \
+            --overwrite
+
+      - name: Create ghcr-pull-secret
+        run: |
+          kubectl create secret docker-registry ghcr-pull-secret \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            -n legal-recovery \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy manifests
+        run: |
+          cd kubernetes_proxmox/proyectos/legal-recovery
+          kubectl apply -k . -n legal-recovery
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/legal-recovery -n legal-recovery --timeout=300s
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n legal-recovery
+          kubectl get svc -n legal-recovery
+          kubectl get ingress -n legal-recovery
+
+      - name: Notify SignOz (optional)
+        if: always()
+        run: |
+          echo "Deployment completed. Check https://legal-recovery.licitpilot.com"
