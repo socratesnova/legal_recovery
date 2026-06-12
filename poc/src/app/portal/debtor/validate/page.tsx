@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Shield,
   CreditCard,
-  Phone,
   Lock,
   CheckCircle2,
   ArrowRight,
@@ -23,26 +22,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
-type Step = "cedula" | "security" | "otp" | "success";
+type Step = "cedula" | "security" | "success";
 
 export default function DebtorValidatePage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("cedula");
   const [cedula, setCedula] = useState("");
   const [securityAnswer, setSecurityAnswer] = useState("");
-  const [otp, setOtp] = useState("");
   const [progress, setProgress] = useState(33);
 
   function handleNext() {
     if (step === "cedula") {
       setCedula("001-1234567-8");
       setStep("security");
-      setProgress(66);
+      setProgress(50);
     } else if (step === "security") {
-      setStep("otp");
-      setProgress(100);
-    } else if (step === "otp") {
       setStep("success");
+      setProgress(100);
       setTimeout(() => {
         router.push("/portal/debtor/dashboard");
       }, 1500);
@@ -70,7 +66,6 @@ export default function DebtorValidatePage() {
           <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
             <span>Cédula</span>
             <span>Pregunta de seguridad</span>
-            <span>Código OTP</span>
           </div>
           <Progress value={progress} className="h-2" />
         </div>
@@ -136,41 +131,6 @@ export default function DebtorValidatePage() {
                 >
                   Verificar
                   <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            )}
-
-            {step === "otp" && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
-                  <Phone className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                  <p className="text-xs text-emerald-700">
-                    Se envió un código a su teléfono registrado.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="otp">Código de verificación</Label>
-                  <Input
-                    id="otp"
-                    value={otp}
-                    onChange={(e) =>
-                      setOtp(e.target.value.replace(/\D/g, "").slice(6))
-                    }
-                    className="text-center text-2xl tracking-[0.5em] font-mono"
-                    maxLength={6}
-                    placeholder="000000"
-                  />
-                  <p className="text-xs text-slate-400 text-center">
-                    Demo: ingrese <span className="font-mono text-emerald-600">123456</span>
-                  </p>
-                </div>
-                <Button
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                  onClick={handleNext}
-                  disabled={otp.length !== 6}
-                >
-                  Verificar Identidad
-                  <Shield className="w-4 h-4 ml-1" />
                 </Button>
               </div>
             )}

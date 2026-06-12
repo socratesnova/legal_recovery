@@ -19,13 +19,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (totp !== "123456") {
-    return NextResponse.json(
-      { error: "Código MFA inválido" },
-      { status: 401 }
-    );
-  }
-
   const token = await createDemoToken(user);
 
   return NextResponse.json({

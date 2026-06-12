@@ -14,6 +14,16 @@ import {
   Menu,
   X,
   ChevronDown,
+  Upload,
+  Brain,
+  Scale,
+  Users,
+  Settings,
+  Building2,
+  FileText,
+  Gavel,
+  Database,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -27,10 +37,22 @@ import { Separator } from "@/components/ui/separator";
 
 const navItems = [
   { href: "/portal/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/portal/admin/marketplace", label: "Marketplace", icon: Store },
+  { href: "/portal/admin/tenants", label: "Instituciones", icon: Building2 },
+  { href: "/portal/admin/crm", label: "CRM", icon: Users },
+  { href: "/portal/admin/portfolios", label: "Carteras", icon: Upload },
   { href: "/portal/admin/cases", label: "Expedientes", icon: FolderOpen },
+  { href: "/portal/admin/documents", label: "Documentos", icon: FileText },
+  { href: "/portal/admin/data-passport", label: "Data Passport", icon: Database },
+  { href: "/portal/admin/scoring", label: "Scoring", icon: BarChart3 },
+  { href: "/portal/admin/legal-workspace", label: "Copiloto Legal", icon: Gavel },
+  { href: "/portal/admin/ai-copilot", label: "AI Copilot", icon: Brain },
   { href: "/portal/admin/communications", label: "Comunicaciones", icon: MessageSquare },
   { href: "/portal/admin/reports", label: "Reportes", icon: BarChart3 },
+  { href: "/portal/admin/compliance", label: "Compliance", icon: Scale },
   { href: "/portal/admin/audit", label: "Auditoría", icon: FileCheck },
+  { href: "/portal/admin/users", label: "Usuarios", icon: Users },
+  { href: "/portal/admin/settings", label: "Configuración", icon: Settings },
 ];
 
 export default function AdminLayout({
