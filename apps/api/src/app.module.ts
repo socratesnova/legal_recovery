@@ -21,6 +21,8 @@ import { ReportsModule } from './reports/reports.module';
 import { AuditModule } from './audit/audit.module';
 import { AiModule } from './ai/ai.module';
 
+import { PrismaModule } from './common/prisma.module';
+
 @Module({
   imports: [
     // Config
@@ -28,6 +30,9 @@ import { AiModule } from './ai/ai.module';
       isGlobal: true,
       envFilePath: ['.env', '.env.local', '.env.development'],
     }),
+
+    // Prisma (global)
+    PrismaModule,
 
     // Rate Limiting
     ThrottlerModule.forRoot({
