@@ -38,6 +38,7 @@ model Institution {
   updatedAt         DateTime @updatedAt @map("updated_at")
   deletedAt         DateTime? @map("deleted_at")
   
+  @@index([status])
   @@map("institutions")
 }
 
@@ -80,11 +81,14 @@ model Portfolio {
   // Relaciones
   rules           PortfolioRule?
   cases           Case[]
-  
+  ingestJobs      PortfolioIngestJob[]
+
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
-  
+
+  @@index([institutionId])
+  @@index([status])
   @@map("portfolios")
 }
 
@@ -101,8 +105,45 @@ model PortfolioRule {
   
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
-  
+
   @@map("portfolio_rules")
+}
+
+// =========================
+// PORTFOLIO INGEST JOBS (async BullMQ pipeline)
+// =========================
+
+model PortfolioIngestJob {
+  id              String   @id @default(uuid()) @db.Uuid
+  portfolioId     String   @map("portfolio_id") @db.Uuid
+  portfolio       Portfolio @relation(fields: [portfolioId], references: [id])
+  institutionId   String   @map("institution_id") @db.Uuid
+  storageKey      String   @map("storage_key")
+  fileName        String   @map("file_name")
+  mimeType        String   @map("mime_type")
+  status          IngestJobStatus @default(PENDING)
+  rowsProcessed   Int      @default(0) @map("rows_processed")
+  casesCreated    Int      @default(0) @map("cases_created")
+  debtorsCreated  Int      @default(0) @map("debtors_created")
+  debtorsReused   Int      @default(0) @map("debtors_reused")
+  skipped         Int      @default(0)
+  errors          Json?    @map("errors")
+  startedBy       String?  @map("started_by") @db.Uuid
+  errorMessage    String?  @map("error_message")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  finishedAt      DateTime? @map("finished_at")
+
+  @@index([portfolioId])
+  @@index([institutionId, status])
+  @@map("portfolio_ingest_jobs")
+}
+
+enum IngestJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
 }
 
 // =========================
@@ -113,17 +154,17 @@ model Debtor {
   id          String   @id @default(uuid()) @db.Uuid
   firstName   String   @map("first_name")
   lastName    String   @map("last_name")
-  idNumber    String   @map("id_number") // Cedula
+  idNumber    String   @unique @map("id_number") // Cedula — global per person
   idType      String   @default("cedula") @map("id_type")
-  
+
   // Relaciones
   cases       Case[]
   contacts    Contact[]
-  
+
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
-  
+
   @@map("debtors")
 }
 
@@ -161,7 +202,12 @@ model Case {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   deletedAt         DateTime? @map("deleted_at")
-  
+
+  @@index([institutionId])
+  @@index([portfolioId])
+  @@index([debtorId])
+  @@index([caseNumber])
+  @@index([status])
   @@map("cases")
 }
 
@@ -200,7 +246,8 @@ model Document {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
-  
+
+  @@index([caseId])
   @@map("documents")
 }
 
@@ -225,7 +272,9 @@ model Contact {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
-  
+
+  @@index([debtorId])
+  @@index([value])
   @@map("contacts")
 }
 
@@ -241,7 +290,8 @@ model Consent {
   
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
-  
+
+  @@index([debtorId])
   @@map("consents")
 }
 
@@ -264,10 +314,16 @@ model Communication {
   // Legal Firewall
   blocked         Boolean  @default(false)
   blockReason     String?  @map("block_reason")
-  
+
+  // Dispatch traceability
+  providerMessageId String?  @map("provider_message_id")
+  simulated          Boolean  @default(false)
+
   createdAt       DateTime @default(now()) @map("created_at")
   ipAddress       String?  @map("ip_address")
-  
+
+  @@index([caseId])
+  @@index([status])
   @@map("communications")
 }
 
@@ -299,7 +355,9 @@ model Agreement {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   deletedAt         DateTime? @map("deleted_at")
-  
+
+  @@index([caseId])
+  @@index([institutionId])
   @@map("agreements")
 }
 
@@ -335,10 +393,14 @@ model Payment {
   
   reconciledAt    DateTime? @map("reconciled_at")
   reconciledBy    String?  @map("reconciled_by") @db.Uuid
-  
+
+  deletedAt       DateTime? @map("deleted_at")
+
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
-  
+
+  @@index([caseId])
+  @@index([institutionId])
   @@map("payments")
 }
 
@@ -363,7 +425,8 @@ model Dispute {
   
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
-  
+
+  @@index([caseId])
   @@map("disputes")
 }
 
@@ -382,13 +445,17 @@ model User {
   role            UserRole
   status          EntityStatus @default(ACTIVE)
   mfaEnabled      Boolean  @default(false) @map("mfa_enabled")
-  
+  passwordHash    String?  @map("password_hash")
+
   lastLoginAt     DateTime? @map("last_login_at")
   
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
-  
+
+  @@index([email])
+  @@index([institutionId])
+  @@index([role])
   @@map("users")
 }
 
@@ -410,7 +477,9 @@ model AuditLog {
   userAgent       String?  @map("user_agent")
   
   createdAt       DateTime @default(now()) @map("created_at")
-  
+
+  @@index([createdAt])
+  @@index([institutionId, action])
   @@map("audit_logs")
 }
 
@@ -451,7 +520,9 @@ model DataPassport {
   
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
-  
+
+  @@index([caseId])
+  @@index([entityId])
   @@map("data_passports")
 }
 
@@ -468,7 +539,8 @@ model DataRestriction {
   
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  
+
+  @@index([entityId, fieldName])
   @@map("data_restrictions")
 }
 

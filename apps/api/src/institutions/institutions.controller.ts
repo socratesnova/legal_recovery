@@ -1,14 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { InstitutionsService } from './institutions.service';
-import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '../common/decorators/roles.decorator';
-import { RolesGuard } from '../common/guards/roles.guard';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from "@nestjs/common";
+import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
+import { InstitutionsService } from "./institutions.service";
+import { Roles, Role } from "../common/decorators/roles.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../common/guards/roles.guard";
+import { CreateInstitutionDto } from "./dto/create-institution.dto";
+import { UpdateInstitutionDto } from "./dto/update-institution.dto";
 
-@ApiTags('Institutions')
+@ApiTags("Institutions")
 @ApiBearerAuth()
-@Controller({ path: 'institutions', version: '1' })
-@UseGuards(RolesGuard)
+@Controller("v1/institutions")
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class InstitutionsController {
   constructor(private readonly institutionsService: InstitutionsService) {}
 
@@ -18,27 +29,27 @@ export class InstitutionsController {
     return this.institutionsService.findAll();
   }
 
-  @Get(':id')
+  @Get(":id")
   @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.BANCO)
-  findOne(@Param('id') id: string) {
+  findOne(@Param("id") id: string) {
     return this.institutionsService.findOne(id);
   }
 
   @Post()
   @Roles(Role.SUPER_ADMIN)
-  create(@Body() data: any) {
+  create(@Body() data: CreateInstitutionDto) {
     return this.institutionsService.create(data);
   }
 
-  @Patch(':id')
+  @Patch(":id")
   @Roles(Role.SUPER_ADMIN, Role.ADMIN)
-  update(@Param('id') id: string, @Body() data: any) {
+  update(@Param("id") id: string, @Body() data: UpdateInstitutionDto) {
     return this.institutionsService.update(id, data);
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @Roles(Role.SUPER_ADMIN)
-  remove(@Param('id') id: string) {
+  remove(@Param("id") id: string) {
     return this.institutionsService.remove(id);
   }
 }

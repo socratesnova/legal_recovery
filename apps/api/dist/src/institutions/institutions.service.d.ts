@@ -1,0 +1,85 @@
+import { PrismaService } from "../common/prisma.service";
+export declare class InstitutionsService {
+    private prisma;
+    constructor(prisma: PrismaService);
+    create(data: any): Promise<{
+        name: string;
+        status: import("@prisma/client").$Enums.EntityStatus;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        type: import("@prisma/client").$Enums.InstitutionType;
+        taxId: string | null;
+        country: string;
+        maxDiscountAuto: import("@prisma/client/runtime/library").Decimal | null;
+        maxDiscountManual: import("@prisma/client/runtime/library").Decimal | null;
+        minInstallments: number | null;
+        maxInstallments: number | null;
+        autoApprovalLimit: import("@prisma/client/runtime/library").Decimal | null;
+    }>;
+    findAll(): Promise<{
+        name: string;
+        status: import("@prisma/client").$Enums.EntityStatus;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        type: import("@prisma/client").$Enums.InstitutionType;
+        taxId: string | null;
+        country: string;
+        maxDiscountAuto: import("@prisma/client/runtime/library").Decimal | null;
+        maxDiscountManual: import("@prisma/client/runtime/library").Decimal | null;
+        minInstallments: number | null;
+        maxInstallments: number | null;
+        autoApprovalLimit: import("@prisma/client/runtime/library").Decimal | null;
+    }[]>;
+    findOne(id: string): Promise<{
+        name: string;
+        status: import("@prisma/client").$Enums.EntityStatus;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        type: import("@prisma/client").$Enums.InstitutionType;
+        taxId: string | null;
+        country: string;
+        maxDiscountAuto: import("@prisma/client/runtime/library").Decimal | null;
+        maxDiscountManual: import("@prisma/client/runtime/library").Decimal | null;
+        minInstallments: number | null;
+        maxInstallments: number | null;
+        autoApprovalLimit: import("@prisma/client/runtime/library").Decimal | null;
+    }>;
+    update(id: string, data: any): Promise<{
+        name: string;
+        status: import("@prisma/client").$Enums.EntityStatus;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        type: import("@prisma/client").$Enums.InstitutionType;
+        taxId: string | null;
+        country: string;
+        maxDiscountAuto: import("@prisma/client/runtime/library").Decimal | null;
+        maxDiscountManual: import("@prisma/client/runtime/library").Decimal | null;
+        minInstallments: number | null;
+        maxInstallments: number | null;
+        autoApprovalLimit: import("@prisma/client/runtime/library").Decimal | null;
+    }>;
+    remove(id: string): Promise<{
+        name: string;
+        status: import("@prisma/client").$Enums.EntityStatus;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        type: import("@prisma/client").$Enums.InstitutionType;
+        taxId: string | null;
+        country: string;
+        maxDiscountAuto: import("@prisma/client/runtime/library").Decimal | null;
+        maxDiscountManual: import("@prisma/client/runtime/library").Decimal | null;
+        minInstallments: number | null;
+        maxInstallments: number | null;
+        autoApprovalLimit: import("@prisma/client/runtime/library").Decimal | null;
+    }>;
+}

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: legal-recovery-config
+  namespace: legal-recovery
+data:
+  NODE_ENV: "production"
+  PORT: "3001"
+  API_URL: "https://legal-recovery.licitpilot.com"
+  WEB_URL: "https://legal-recovery.licitpilot.com"
+  NEXT_PUBLIC_API_URL: "https://legal-recovery.licitpilot.com/api"
+  LOG_LEVEL: "info"
+  ENABLE_AUDIT_LOG: "true"
+  METRICS_ENABLED: "true"

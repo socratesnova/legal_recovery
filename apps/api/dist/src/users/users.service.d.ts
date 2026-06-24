@@ -1,0 +1,98 @@
+import { PrismaService } from "../common/prisma.service";
+import { CreateUserDto } from "./dto/create-user.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
+import { AuthenticatedUser } from "../common/decorators/current-user.decorator";
+export declare class UsersService {
+    private prisma;
+    constructor(prisma: PrismaService);
+    findByEmail(email: string): Promise<{
+        email: string;
+        name: string;
+        role: import("@prisma/client").$Enums.UserRole;
+        institutionId: string | null;
+        status: import("@prisma/client").$Enums.EntityStatus;
+        mfaEnabled: boolean;
+        id: string;
+        keycloakId: string | null;
+        passwordHash: string | null;
+        lastLoginAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    findById(id: string, actor: AuthenticatedUser): Promise<{
+        email: string;
+        name: string;
+        role: import("@prisma/client").$Enums.UserRole;
+        institutionId: string | null;
+        status: import("@prisma/client").$Enums.EntityStatus;
+        mfaEnabled: boolean;
+        id: string;
+        keycloakId: string | null;
+        passwordHash: string | null;
+        lastLoginAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    create(data: CreateUserDto, actor: AuthenticatedUser): Promise<{
+        email: string;
+        name: string;
+        role: import("@prisma/client").$Enums.UserRole;
+        institutionId: string | null;
+        status: import("@prisma/client").$Enums.EntityStatus;
+        mfaEnabled: boolean;
+        id: string;
+        keycloakId: string | null;
+        passwordHash: string | null;
+        lastLoginAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    findAll(institutionId: string | undefined, actor: AuthenticatedUser): Promise<{
+        email: string;
+        name: string;
+        role: import("@prisma/client").$Enums.UserRole;
+        institutionId: string | null;
+        status: import("@prisma/client").$Enums.EntityStatus;
+        mfaEnabled: boolean;
+        id: string;
+        keycloakId: string | null;
+        passwordHash: string | null;
+        lastLoginAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }[]>;
+    update(id: string, data: UpdateUserDto, actor: AuthenticatedUser): Promise<{
+        email: string;
+        name: string;
+        role: import("@prisma/client").$Enums.UserRole;
+        institutionId: string | null;
+        status: import("@prisma/client").$Enums.EntityStatus;
+        mfaEnabled: boolean;
+        id: string;
+        keycloakId: string | null;
+        passwordHash: string | null;
+        lastLoginAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    remove(id: string, actor: AuthenticatedUser): Promise<{
+        email: string;
+        name: string;
+        role: import("@prisma/client").$Enums.UserRole;
+        institutionId: string | null;
+        status: import("@prisma/client").$Enums.EntityStatus;
+        mfaEnabled: boolean;
+        id: string;
+        keycloakId: string | null;
+        passwordHash: string | null;
+        lastLoginAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+}

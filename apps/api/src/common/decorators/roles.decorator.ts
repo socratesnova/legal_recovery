@@ -1,15 +1,6 @@
-import { SetMetadata } from '@nestjs/common';
+import { SetMetadata } from "@nestjs/common";
+import { UserRole } from "./current-user.decorator";
 
-export enum Role {
-  SUPER_ADMIN = 'super_admin',
-  ADMIN = 'admin',
-  SUPERVISOR = 'supervisor',
-  GESTOR = 'gestor',
-  ABOGADO = 'abogado',
-  COMPLIANCE = 'compliance',
-  BANCO = 'banco',
-  DEUDOR = 'deudor',
-}
-
-export const ROLES_KEY = 'roles';
-export const Roles = (...roles: Role[]) => SetMetadata(ROLES_KEY, roles);
+export { UserRole as Role } from "./current-user.decorator";
+export const ROLES_KEY = "roles";
+export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);

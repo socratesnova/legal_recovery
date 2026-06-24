@@ -70,11 +70,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: cd apps/api && npx prisma migrate deploy
         env:
-          DATABASE_URL: postgresql://legal_recovery:***@localhost:5432/legal_recovery_test
+          DATABASE_URL: postgresql://legal_recovery:legal_recovery_dev_2024@localhost:5432/legal_recovery_test
       - run: pnpm test:integration
         env:
-          DATABASE_URL: postgresql://legal_recovery:***@localhost:5432/legal_recovery_test
+          DATABASE_URL: postgresql://legal_recovery:legal_recovery_dev_2024@localhost:5432/legal_recovery_test
           REDIS_URL: redis://localhost:6379
+          # Required at boot: the API refuses to start without a valid JWT
+          # secret (assertValidJwtSecret fails fast). This value only protects
+          # the ephemeral CI test database, so it is safe to commit here.
+          JWT_SECRET: ci-integration-jwt-secret-for-ephemeral-test-db-only
 
   build-and-push:
     runs-on: ubuntu-latest
@@ -93,12 +97,14 @@ jobs:
       - name: Build and push API
         uses: docker/build-push-action@v5
         with:
-          context: ./apps/api
+          context: .
+          file: ./apps/api/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository }}/api:${{ github.sha }},ghcr.io/${{ github.repository }}/api:latest
       - name: Build and push Web
         uses: docker/build-push-action@v5
         with:
-          context: ./apps/web
+          context: .
+          file: ./apps/web/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository }}/web:${{ github.sha }},ghcr.io/${{ github.repository }}/web:latest

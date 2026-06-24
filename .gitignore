@@ -17,6 +17,11 @@ coverage/
 .env.development.local
 .env.test.local
 .env.production.local
+apps/*/.env
+apps/*/.env.local
+apps/*/.env.*.local
+packages/*/.env
+packages/*/.env.local
 
 # IDE
 .vscode/
