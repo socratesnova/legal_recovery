@@ -18,9 +18,9 @@ RUN pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY package.json pnpm-workspace.yaml turbo.json ./
 COPY apps/web ./apps/web
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 WORKDIR /app/apps/web
 RUN pnpm exec next build
 
