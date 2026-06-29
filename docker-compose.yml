@@ -13,7 +13,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infra/docker/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-legal_recovery} -d ${POSTGRES_DB:-legal_recovery}"]
       interval: 5s
@@ -66,8 +65,8 @@ services:
     restart: "no"
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-legal_recovery}:${POSTGRES_PASSWORD:-legal_recovery_dev_2024}@postgres:5432/${POSTGRES_DB:-legal_recovery}}
-    command: ["sh", "-c", "cd /app/apps/api && npx prisma migrate deploy && npx prisma generate"]
+      DATABASE_URL: postgresql://${POSTGRES_USER:-legal_recovery}:${POSTGRES_PASSWORD:-legal_recovery_dev_2024}@postgres:5432/${POSTGRES_DB:-legal_recovery}?schema=public
+    command: ["sh", "-c", "cd /app && node node_modules/.pnpm/prisma@6.19.3_typescript@5.9.3/node_modules/prisma/build/index.js migrate deploy --schema prisma/schema.prisma"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -82,7 +81,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-legal_recovery}:${POSTGRES_PASSWORD:-legal_recovery_dev_2024}@postgres:5432/${POSTGRES_DB:-legal_recovery}}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-legal_recovery}:${POSTGRES_PASSWORD:-legal_recovery_dev_2024}@postgres:5432/${POSTGRES_DB:-legal_recovery}?schema=public
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-local-jwt-secret-key-for-development-only-32chars}
       PORT: ${API_PORT:-3001}

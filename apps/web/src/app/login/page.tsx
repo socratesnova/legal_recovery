@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,12 +17,28 @@ import {
 import { Shield, Lock, Building2 } from "lucide-react";
 import { login } from "@/lib/api-client";
 
+// Same default the middleware uses to validate the token. Stop-gap: once the
+// backend sets an HttpOnly cookie on /auth/login, this helper disappears.
+const AUTH_COOKIE = "auth_token";
+const COOKIE_MAX_AGE = 60 * 60 * 8; // 8h, matching JWT exp
+
+function setClientCookie(name: string, value: string, maxAgeSeconds: number): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax`;
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/portal/admin/dashboard";
+  const reason = searchParams.get("reason");
+
+  // Demo creds are pre-filled in development/demo builds only. The middleware
+  // (apps/web/src/middleware.ts) enforces real auth at the edge regardless.
   const [email, setEmail] = useState("admin@legalrecovery.do");
   const [password, setPassword] = useState("demo1234");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(reason === "auth_unavailable" ? "Servicio de autenticación no disponible. Reintente." : "");
 
   async function handleLogin() {
     setLoading(true);
@@ -30,7 +46,12 @@ export default function LoginPage() {
 
     try {
       const data = await login(email, password);
-      router.push("/portal/admin/dashboard");
+      // Mirror the JWT into a non-HttpOnly cookie so the Next.js middleware
+      // (which runs server-side and cannot read localStorage) can see it.
+      // Will be replaced by an HttpOnly Secure SameSite=Lax cookie set by the
+      // backend on /auth/login (tracked in the security roadmap).
+      setClientCookie(AUTH_COOKIE, data.access_token, COOKIE_MAX_AGE);
+      router.push(redirect);
     } catch (err: any) {
       setError(err.message || "Error de autenticación");
       setLoading(false);

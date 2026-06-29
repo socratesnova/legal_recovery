@@ -58,6 +58,9 @@ export function logout() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    // Mirror the cookie the middleware reads. Stop-gap until the backend
+    // issues an HttpOnly cookie on /auth/login.
+    document.cookie = "auth_token=; Path=/; Max-Age=0; SameSite=Lax";
   }
 }
 

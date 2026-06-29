@@ -71,10 +71,10 @@ describe("RolesGuard", () => {
   });
 
   it("allows when the JWT role is one of several required roles", () => {
-    const ctx = makeContext(
-      { role: "ADMIN" },
-      [UserRole.ADMIN, UserRole.SUPER_ADMIN],
-    );
+    const ctx = makeContext({ role: "ADMIN" }, [
+      UserRole.ADMIN,
+      UserRole.SUPER_ADMIN,
+    ]);
     expect(guard.canActivate(ctx)).toBe(true);
   });
 
@@ -84,10 +84,10 @@ describe("RolesGuard", () => {
   });
 
   it("denies (403) when the JWT role is not among the required roles", () => {
-    const ctx = makeContext(
-      { role: "GESTOR" },
-      [UserRole.ADMIN, UserRole.SUPER_ADMIN],
-    );
+    const ctx = makeContext({ role: "GESTOR" }, [
+      UserRole.ADMIN,
+      UserRole.SUPER_ADMIN,
+    ]);
     expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
   });
 

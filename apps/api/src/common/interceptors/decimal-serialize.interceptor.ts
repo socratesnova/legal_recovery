@@ -27,7 +27,10 @@ import { Decimal } from "@prisma/client/runtime/library";
  */
 @Injectable()
 export class DecimalSerializeInterceptor implements NestInterceptor {
-  intercept(_context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  intercept(
+    _context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<unknown> {
     return next.handle().pipe(map((data) => this.coerceDecimals(data)));
   }
 

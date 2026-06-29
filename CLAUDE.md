@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Package manager and environment
 
-- **Package manager:** `pnpm` (v10). Do not use `npm` or `yarn` for monorepo operations. Note: the Dockerfiles in `apps/api/Dockerfile` and `apps/web/Dockerfile` currently use `npm`, which is a known inconsistency.
+- **Package manager:** `pnpm` (v10). Do not use `npm` or `yarn` for monorepo operations. Dockerfiles (`apps/api/Dockerfile`, `apps/web/Dockerfile`) now use `pnpm` via corepack.
 - **Node:** 20+ expected.
 - **Monorepo tool:** Turborepo (`turbo.json` at root). Workspaces: `apps/*`, `packages/*` (see `pnpm-workspace.yaml`).
+- **`.env` file:** `turbo.json` declares `globalDependencies: [".env"]`. Keep `.env` present at the repo root or turbo invalidates caches and re-runs tasks.
 
 ## Common commands
 
@@ -64,6 +65,18 @@ docker-compose up
 - Swagger: http://localhost:3001/api/docs
 - MinIO Console: http://localhost:9001
 
+## Health endpoint caveat
+
+The Dockerfile `HEALTHCHECK` calls `/api/v1/healthz`, but the actual route exposed by `AuthController` is `GET /api/v1/auth/healthz`. The Docker health check will fail until one is renamed. Kubernetes probes currently point at `/api/v1/auth/healthz` — pick one and align both before relying on `docker-compose` health gating or k8s probes.
+
+## Backend infra quick notes
+
+- API namespace: `app.setGlobalPrefix("api")`. Controllers include their own version in the path (e.g. `@Controller("v1/auth")`); don't add Nest URI versioning on top.
+- BullMQ connection reads `REDIS_HOST` / `REDIS_PORT` from env (no `REDIS_URL` support in `AppModule`). The container `docker-compose.yml` only sets `REDIS_URL`, so the queue falls back to `localhost:6379` if you don't also export `REDIS_HOST=redis`.
+- `StorageModule` config reads `MINIO_*` env vars (`MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`, `MINIO_USE_SSL`).
+- Frontend → API base: `NEXT_PUBLIC_API_URL` (default `http://localhost:3002`, compose overrides to `http://localhost:3001`).
+- Prisma migrations live under `apps/api/prisma/migrations/` (multiple timestamped migrations exist; always run `pnpm db:migrate` after pulling).
+
 ## Canonical sources of truth
 
 `AGENTS.md` is the primary companion document. Read it first for:
@@ -95,12 +108,12 @@ docker-compose up
 ### Active vs. stubbed modules
 
 Wired in `apps/api/src/app.module.ts`:
-`AuthModule`, `UsersModule`, `InstitutionsModule`, `PortfoliosModule` (with `PortfolioIngestService`), `CasesModule`, `DocumentsModule` (real S3 upload/download), `DataPassportsModule`, `ContactsModule`, `ConsentsModule`, `AgreementsModule`, `PaymentsModule`, `DisputesModule`, `CommunicationsModule` (Legal Firewall-gated, real dispatch via `NotificationDispatcher`), `ReportsModule`, `AuditModule`.
+`AuthModule`, `UsersModule`, `InstitutionsModule`, `PortfoliosModule` (with `PortfolioIngestService`), `CasesModule`, `DocumentsModule` (real S3 upload/download), `DataPassportsModule`, `ContactsModule`, `ConsentsModule`, `AgreementsModule`, `PaymentsModule`, `DisputesModule`, `CommunicationsModule` (Legal Firewall-gated, real dispatch via `NotificationDispatcher`), `ReportsModule`, `AuditModule`, `ScoresModule`, `RulesModule`.
 
-Global infra modules: `ConfigModule`, `PrismaModule` (exports `PrismaService` + `LegalFirewallService`), `StorageModule` (exports `StorageService`), `ThrottlerModule`, `BullModule`.
+Global infra: `ConfigModule`, `PrismaModule` (exports `PrismaService` + `LegalFirewallService`), `RulesModule` (global), `StorageModule` (exports `StorageService`), `ThrottlerModule`, `BullModule`. Global interceptors registered as DI providers: `AuditInterceptor`, `DecimalSerializeInterceptor` (registered in `main.ts` via `app.get(...)`).
 
-Still **commented out** in `app.module.ts` (models exist in Prisma, NestJS modules not yet built):
-`Scores`, `AI`.
+Still **commented out** in `app.module.ts`:
+`AiModule` (model exists in Prisma, module not built).
 
 When enabling or adding a module, import it in `AppModule` and add its Swagger tag in `apps/api/src/main.ts`.
 
@@ -181,16 +194,15 @@ On the backend, `DataPassport` and `DataRestriction` Prisma models exist. On the
 3. `test-integration` (spins up PostgreSQL 16 and Redis 7 services, runs Prisma migrate deploy, then integration tests).
 4. `build-and-push` (Docker images to GHCR) only on `main`/`master` after tests pass.
 
-`.github/workflows/deploy.yml` handles deployment to the Proxmox/K3s environment.
+`.github/workflows/deploy.yml` handles deployment to the Proxmox/K3s environment. Kubernetes manifests live in `kubernetes_proxmox/proyectos/legal-recovery` and Kustomize expects `secrets/.env.secret` at deploy time.
 
 ## Important state notes
 
 - `packages/shared-types` has a `package.json` and a minimal `src/index.ts` placeholder; expand when sharing types between apps.
-- The `poc/` directory is the old standalone demo and should be ignored for new work.
-- Core read/write flows are implemented and tenant-scoped: auth (bcrypt), users, institutions, portfolios (+ CSV/XLSX ingest), cases, documents (real S3 upload/download), data-passports, contacts, consents, disputes, communications (Legal Firewall-gated), agreements, payments, reports, audit. Some `ReportsModule` aggregations remain lightweight.
-- **Debtor dedupe is global by `idNumber`** (no `institutionId` on `Debtor`). Access is governed by the tenant-scoped `Case`, not the `Debtor` row. Adding `@unique` on `idNumber` + RLS is a hardening TODO.
+- The `poc/` directory is the old standalone demo and should be ignored for new work. The root `README.md` is stale (still points at `poc`); prefer executable config (`package.json`, `turbo.json`, `pnpm-workspace.yaml`) and `AGENTS.md`.
+- Core read/write flows are implemented and tenant-scoped: auth (bcrypt), users, institutions, portfolios (+ CSV/XLSX ingest), cases, documents (real S3 upload/download), data-passports, contacts, consents, disputes, communications (Legal Firewall-gated), agreements, payments, reports, audit, scores, rules. Some `ReportsModule` aggregations remain lightweight.
+- **Debtor dedupe is global by `idNumber`** (no `institutionId` on `Debtor`). Access is governed by the tenant-scoped `Case`, not the `Debtor` row. The `@unique` on `idNumber` is in place; RLS is a hardening TODO.
 - The frontend uses `localStorage` for demo auth tokens; this is not production-grade.
-- Dockerfiles currently use `npm` instead of `pnpm`; this is a known inconsistency.
-- `turbo.json` declares `globalDependencies: [".env"]`. Keep `.env` present or turbo will re-run tasks unnecessarily.
+- Web `test`, `test:integration`, and `test:e2e` scripts are no-ops that exit `0`; do not rely on them.
 - `pnpm-workspace.yaml` declares `onlyBuiltDependencies: [bcrypt]` (pnpm 10 no longer reads this from `package.json`).
-- Dependency CVE status: `pnpm audit --prod` reports 0 high (down from 14). Residual 3 moderate + 1 low are transitive and non-exploitable in our flow: `postcss` (via next, forcing it risks the build), `uuid@8` (via exceljs, v3/v5/v6 buffer check only — we use v4), `js-yaml@4.1.1` (via @nestjs/swagger; only generates YAML, never parses untrusted), `elliptic` (via keycloak-connect, no upstream patch).
+- Dependency CVE status: `pnpm audit --prod` reports 0 high. Residual 3 moderate + 1 low are transitive and non-exploitable in our flow: `postcss` (via next, forcing it risks the build), `uuid@8` (via exceljs, v3/v5/v6 buffer check only — we use v4), `js-yaml@4.1.1` (via @nestjs/swagger; only generates YAML, never parses untrusted), `elliptic` (via keycloak-connect, no upstream patch).

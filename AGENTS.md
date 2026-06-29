@@ -1,143 +1,70 @@
 # AGENTS.md — Legal Recovery OS
 
-## Project state
+## Repo shape
 
-- **Monorepo with code.** Active code is in `apps/api` (NestJS) and `apps/web` (Next.js 15). The `poc/` directory is the old standalone proof-of-concept — do not edit; it is kept for reference.
-- **Workspaces:** `apps/*`, `packages/*`. Package manager: `pnpm@10`. Use `pnpm` for all monorepo operations.
-- **Not productionized yet.** Backend auth is JWT-based demo (password hash not validated). Frontend runs on static demo data and stores a demo JWT in `localStorage`.
+- Active code is the pnpm/turbo monorepo: `apps/api` (NestJS 11), `apps/web` (Next.js 15.5.18), `packages/shared-types` (minimal placeholder). Ignore `poc/`; it is the old standalone demo.
+- Use `pnpm@10` from the repo root. Do not switch to `npm`/`yarn`; Dockerfiles also use pnpm now.
+- Root `README.md` is stale (it still points at `poc`). Prefer executable config (`package.json`, `turbo.json`, `pnpm-workspace.yaml`) and this file.
 
-## Canonical sources of truth
+## Product sources that matter
 
-| Need | Read this |
-|------|-----------|
-| Product vision, backlog, acceptance criteria | `Legal_Recovery_OS_Documento_de_Alcance.md` |
-| Stack decisions, cost estimates, monorepo intent | `PLAN_MAESTRO_IMPLEMENTACION.md` |
-| Architecture & business rules per module | `Legal_Recovery_OS_Prompts_Desarrollo/*.txt` (23 prompts) |
-| Prompt index | `Legal_Recovery_OS_Prompts_Desarrollo/prompts_index.json` |
-| Prisma data model | `apps/api/prisma/schema.prisma` |
-| Infrastructure / Proxmox VM | `DEPLOY_PROXMOX.md` |
-| Frontend-specific Next.js guidance | `apps/web/AGENTS.md` |
+- Scope/backlog/acceptance: `Legal_Recovery_OS_Documento_de_Alcance.md`.
+- Module prompts live at repo root (`01_prompt_*.txt` … `22_prompt_*.txt`); `prompts_index.json` is the index. Read the relevant prompt before generating module code.
+- Prisma model source of truth: `apps/api/prisma/schema.prisma`.
+- Frontend-specific Next.js warning: read `apps/web/AGENTS.md` before editing `apps/web`.
 
-**The prompts are the canonical source of truth for code generation.** Read the relevant prompt first; every prompt repeats the 8 critical rules at the top.
-
-## Common commands
-
-Run from the repository root unless noted.
+## Commands
 
 ```bash
-# Install / reset
 pnpm install
+pnpm dev                       # turbo, API + web in parallel
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
+pnpm test:integration           # API integration suite; needs local PostgreSQL + Redis
+pnpm test:e2e                   # API e2e config exists; web e2e is only a no-op script
 
-# Dev servers (both apps in parallel via turbo)
-pnpm dev
+pnpm db:generate                # cd apps/api && prisma generate
+pnpm db:migrate                 # cd apps/api && prisma migrate dev
+pnpm db:seed                    # cd apps/api && ts-node scripts/seed.ts
+pnpm db:studio
 
-# Verification order in CI: lint -> typecheck -> test -> build
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-
-# Integration / E2E tasks are defined in turbo.json and CI but currently need
-# real test configs to exist under apps/api/test. Do not expect them to pass
-# out-of-the-box until those configs are added.
-pnpm test:integration
-pnpm test:e2e
-
-# Prisma (schema lives in apps/api)
-pnpm db:generate      # regenerate Prisma Client
-pnpm db:migrate       # create/apply dev migrations
-pnpm db:seed          # run apps/api/scripts/seed.ts
-pnpm db:studio        # open Prisma Studio
-
-# Per-app dev shortcuts
-cd apps/api && pnpm start:dev     # NestJS watch mode
-cd apps/api && pnpm test:watch    # Jest watch mode
-cd apps/api && npx jest --testPathPattern=auth.service   # single test
-cd apps/web && pnpm dev           # Next.js dev server, port 3000
+cd apps/api && pnpm start:dev    # local API defaults to :3002
+cd apps/api && pnpm test:watch
+cd apps/api && npx jest src/auth/auth.service.spec.ts
+cd apps/web && pnpm dev          # web :3000
 ```
 
-### Test reality check
+## Test and infra gotchas
 
-- `apps/api` has a `jest` block in `package.json` for unit tests only.
-- `test/jest-integration.json` and `test/jest-e2e.json` referenced in `package.json` **do not exist yet**.
-- CI integration job uses inline `DATABASE_URL` and `REDIS_URL` against service containers; local integration tests will fail unless PostgreSQL 16 + Redis are running.
+- API unit tests are `apps/api/src/**/*.spec.ts` via the Jest block in `apps/api/package.json` (`rootDir: src`).
+- API integration tests are under `apps/api/test/integration/*.integration-spec.ts`; `test/setup-env.ts` defaults to `postgresql://legal_recovery:legal_recovery_dev_2024@localhost:5432/legal_recovery_test?schema=public` and `redis://localhost:6379` if env vars are absent.
+- `docker-compose.yml` starts PostgreSQL 16, Redis 7, MinIO, API, and web. Docker API is on `:3001`; local `pnpm start:dev` API is on `:3002`.
+- `turbo.json` has `globalDependencies: [".env"]`; changing or adding `.env` invalidates turbo cache.
+- There is currently no `.github/workflows/` directory in this checkout. Kubernetes manifests live in `kubernetes_proxmox/proyectos/legal-recovery` and expect `secrets/.env.secret` for kustomize.
 
-## Tech stack
+## Backend notes (`apps/api`)
 
-| Layer | Choice | Notes |
-|-------|--------|-------|
-| Frontend | Next.js 15.3.2 + React 19 + Tailwind CSS v4 + shadcn/ui | App Router, `output: "standalone"`, dark slate/emerald theme |
-| Backend | NestJS 11 (TypeScript) | Modular: controllers, services, guards, pipes |
-| ORM | Prisma 6 | `apps/api/prisma/schema.prisma` is single source of truth |
-| Auth | JWT demo now; Keycloak planned | JWT payload: `sub`, `email`, `role`, `institutionId` |
-| Queues | BullMQ + Redis | Wired in `AppModule`, not actively used by modules yet |
-| Files | MinIO (S3-compatible) | Presigned URLs via `@aws-sdk/client-s3` |
-| AI microservice | FastAPI + LangChain + ChromaDB | **Only Python service.** Internal network only (Phase 2) |
-| BI | Metabase | Connects directly to PostgreSQL |
-| DB | PostgreSQL 16 | UUID PKs, soft deletes via `deleted_at` |
+- Routes use `app.setGlobalPrefix("api")`; controllers include the version in their path (for example `@Controller("v1/auth")`). Do not add Nest URI versioning unless you rework routes.
+- Swagger is at `/api/docs`; when adding a module, import it in `AppModule` and add the Swagger tag in `apps/api/src/main.ts`.
+- Active modules in `AppModule`: Auth, Users, Institutions, Portfolios, Cases, Documents, DataPassports, Contacts, Consents, Rules, Scores, Agreements, Payments, Disputes, Communications, Reports, Audit. `AiModule` is still commented out.
+- Global providers/interceptors: `PrismaModule` exports `PrismaService` + `LegalFirewallService`; `StorageModule` wraps MinIO/S3; `DecimalSerializeInterceptor` normalizes Prisma Decimal responses; `AuditInterceptor` logs mutations.
+- Health route is `/api/v1/auth/healthz`. Kubernetes probes use this path; `apps/api/Dockerfile` currently checks `/api/v1/healthz`, which is a mismatch to fix before relying on Docker health.
+- BullMQ config currently reads `REDIS_HOST`/`REDIS_PORT`, not `REDIS_URL`; set those when testing queues/portfolio async ingest.
+- Prisma migrations directory only contains `migration_lock.toml` in this checkout; do not assume migrations exist just because `migrate deploy` appears in scripts/compose.
 
-## Architecture notes
+## Frontend notes (`apps/web`)
 
-- **Three portals:** `/portal/admin` (legal office), `/portal/bank` (bank/fund), `/portal/debtor` (self-service).
-- **Multi-tenant:** shared DB/shared schema with `institution_id` on tenant-scoped entities; RLS policies are intended.
-- **Data Passport + Legal Firewall:** every sensitive field carries provenance metadata. `canUseData(user, data, purpose, channel)` must gate contact and data access. Frontend rules live in `apps/web/src/lib/legal-firewall.ts`.
-- **Entity states:** `active`, `restricted`, `blocked`, `disputed`, `closed`.
-- **API versioning:** REST with URI versioning (`/api/v1/...`). Swagger docs at `/api/docs`.
-- **Global middleware:** Helmet, compression, CORS, `ValidationPipe` (whitelist + forbidNonWhitelisted), `AuditInterceptor`, `HttpExceptionFilter`.
+- Next.js is pinned to `15.5.18` with React 19 and Tailwind v4. `next.config.ts` disables standalone output on Windows to avoid symlink EPERM, disables ESLint during builds, and uses unoptimized images.
+- The UI has three portal families under `/portal/admin`, `/portal/bank`, and `/portal/debtor`.
+- Many pages still use static demo data from `apps/web/src/lib/seed-data.ts`; auth/API helpers store JWT/user in `localStorage`. Do not treat frontend auth as production-grade.
+- `NEXT_PUBLIC_API_URL` defaults to `http://localhost:3002` in `src/lib/api-client.ts`; compose overrides it to `http://localhost:3001`.
+- Web `test`, `test:integration`, and `test:e2e` scripts are no-ops that exit 0.
 
-### Backend module wiring
+## Non-negotiable business rules
 
-Only these modules are currently enabled in `apps/api/src/app.module.ts`:
-- `AuthModule`, `UsersModule`, `InstitutionsModule`, `PortfoliosModule`, `CasesModule`, `DocumentsModule`, `AgreementsModule`, `PaymentsModule`, `ReportsModule`.
-
-These exist as controller/service stubs but are **commented out** in `app.module.ts`:
-`DataPassports`, `Contacts`, `Consents`, `Scores`, `Disputes`, `Communications`, `Audit`, `AI`.
-
-When adding a new module, import it in `AppModule` **and** add its Swagger tag in `apps/api/src/main.ts`.
-
-### Quirks
-
-- `apps/web/package.json` has `"name": "poc"` — a leftover from migration. Always refer to the package by path `apps/web` in workspace scripts, never by the name `poc`.
-- `packages/shared-types` has a `package.json` but no exported source files yet.
-- `turbo.json` declares `globalDependencies: [".env"]`. Keep `.env` present or turbo will re-run tasks unnecessarily.
-- `apps/web/next.config.ts` disables ESLint during builds (`ignoreDuringBuilds: true`) and uses unoptimized images.
-- API Dockerfile runs `prisma migrate deploy && prisma generate` at container start, so a live DB must be reachable before the API starts.
-
-## Local infrastructure
-
-```bash
-# PostgreSQL 16, Redis 7, MinIO, API, Web
-docker-compose up
-```
-
-- API: http://localhost:3001
-- Web: http://localhost:3000
-- Swagger: http://localhost:3001/api/docs
-- MinIO Console: http://localhost:9001
-
-Root `docker-compose.yml` is the primary local stack definition. `infra/docker/docker-compose.yml` is an alternate, more detailed compose with init scripts; prefer the root one for quick local runs.
-
-## CI/CD
-
-- `.github/workflows/ci-cd.yml`: lint/typecheck -> unit tests -> integration tests (PG+Redis services + `prisma migrate deploy`) -> build/push Docker images to GHCR on `main`/`master`.
-- `.github/workflows/deploy.yml`: self-hosted K3s runner builds images, applies Kustomize manifests from `kubernetes_proxmox/proyectos/legal-recovery`, and waits for rollouts. Deployment runs only on `main`/`master`.
-
-## Critical business rules — never violate
-
-1. **Data provenance:** every field must carry source, date, legal basis, allowed uses, restrictions, confidence score, audit trail. Block data without a legal/contractual source.
-2. **No unauthorized contact:** block communication to unauthorized third parties.
-3. **WhatsApp restrictions:** restricted channel — opt-in + policy rules required. Never use for direct mass collection.
-4. **External data restrictions:** TSS, JCE, credit bureaus — only via authorized integrations with valid legal basis. No scraping.
-5. **Human-in-the-loop:** legally sensitive decisions require human review. AI never auto-decides these.
-6. **Immutable audit logs:** every create/update/delete/download/contact action logged immutably.
-7. **RBAC/ABAC:** access by role + institution + portfolio + data sensitivity. Multi-tenant isolation mandatory.
-8. **No equal spending:** every case needs budget, score, and next best action — do not spend equally on all.
-
-## Testing priorities
-
-Per `21_prompt_testing_qa.txt`, focus first on:
-- Legal Firewall blocking (missing source, unauthorized contact, WhatsApp without opt-in, disputed cases, expired/restricted data).
-- RBAC/ABAC per institution and portfolio.
-- Audit log immutability.
-- Portfolio upload validation.
-- Debtor portal access boundaries.
+- Every sensitive field/action needs Data Passport provenance: source, legal basis, allowed/prohibited uses, restrictions, confidence, expiry/visibility, audit trail.
+- Every sensitive access/contact/download/export must pass through the Legal Firewall (`LegalFirewallService` backend; `apps/web/src/lib/legal-firewall.ts` frontend mirror).
+- Never contact unauthorized third parties; WhatsApp requires explicit opt-in and policy allowance; disputed/blocked cases and expired/restricted data must block.
+- External sources (TSS, JCE, credit bureaus) require authorized integrations and valid legal basis; no scraping.
+- AI/scoring may assist but must not auto-decide legally sensitive outcomes; preserve human review.
+- Tenant isolation is by institution/portfolio/case. `Debtor` is global by unique `idNumber`; access must be governed via tenant-scoped `Case`, not by adding `institutionId` to `Debtor` casually.
+- Audit logs for create/update/delete/download/contact flows must be immutable/append-only.
